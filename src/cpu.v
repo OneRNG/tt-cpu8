@@ -1,6 +1,6 @@
 `default_nettype none
 
-module cpu_4bit #( parameter MAX_COUNT = 1000 ) (
+module moonbase_cpu_4bit #( parameter MAX_COUNT = 1000 ) (
   input [7:0] io_in,
   output [7:0] io_out
 );
@@ -64,6 +64,7 @@ module cpu_4bit #( parameter MAX_COUNT = 1000 ) (
 	c_x = r_x;
 	c_a = r_a;
 	c_tmp = r_tmp;
+	c_tmp2 = r_tmp2;
 	c_pc = r_pc;
 	write_data_n = 1;
 	write_ram_n = 1;
@@ -76,7 +77,7 @@ module cpu_4bit #( parameter MAX_COUNT = 1000 ) (
 		c_phase <= 0;
 		strobe_out = 1;
     	end else 
-    	case (r_phase) 
+    	case (r_phase) // synthesis full_case parallel_case
     	0:	begin
 	  		strobe_out = 1;
 			addr_pc = 1;
@@ -97,7 +98,7 @@ module cpu_4bit #( parameter MAX_COUNT = 1000 ) (
 	  		strobe_out = 0;
 			c_tmp = ram_in;
 			c_pc = r_pc+1;
-			case (r_ins) 
+			case (r_ins) // synthesis full_case parallel_case
 			8, 9, 10, 11: c_phase = 6;
 			default:c_phase = 4;
 			endcase
@@ -119,7 +120,7 @@ module cpu_4bit #( parameter MAX_COUNT = 1000 ) (
 	  		strobe_out = r_ins[3:1] == 5;	// write to anything
 	  		addr_pc = 0;
 			c_phase = 0;
-			case (r_ins)
+			case (r_ins)// synthesis full_case parallel_case
 			0:	c_a = r_a+r_tmp;
 			1:	c_a = r_a-r_tmp;
 			2:	c_a = r_a|r_tmp;

@@ -91,7 +91,12 @@ module tb (
     assign data_write = outputs[7] ? 1 : outputs[4]; // negative data strobe
 
     // instantiate the DUT
-    cpu_4bit #(.MAX_COUNT(100)) cpu(
+    moonbase_cpu_4bit #(.MAX_COUNT(100)) cpu(
+`ifdef GL_TEST
+        .vccd1( 1'b1),
+        .vssd1( 1'b0),
+`endif
+
         .io_in  (inputs),
         .io_out (outputs)
         );
