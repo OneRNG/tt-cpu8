@@ -21,10 +21,10 @@ module tb (
 	sram[8'h00] = 'h8;	// mov a, #0
 	sram[8'h01] = 'h0;
 	sram[8'h02] = 'hc;	// mov x, #0x50
-	sram[8'h03] = 'h5;
+	sram[8'h03] = 'hf;
 	sram[8'h04] = 'h0;
-	sram[8'h05] = 'ha;	// movd	0xa(x), a    a->5e
-	sram[8'h06] = 'he;	
+	sram[8'h05] = 'ha;	// movd	7(x), a    a->f7
+	sram[8'h06] = 'h7;	
 	sram[8'h07] = 'hb;	// mov 0(x), a
 	sram[8'h08] = 'h0;	
 	sram[8'h09] = 'h8;	// mov	a, #1
@@ -44,38 +44,58 @@ module tb (
 	sram[8'h15] = 'hc;
 	sram[8'h16] = 'h1;	// sub	a, 0(x)
 	sram[8'h17] = 'h0;	
-	sram[8'h18] = 'ha;	// movd	0xa(x), a    a->5e
-	sram[8'h19] = 'he;	
+	sram[8'h18] = 'ha;	// movd	7(x), a    a->f7
+	sram[8'h19] = 'h7;	
 	
 	sram[8'h1a] = 'h8;	// mov a, #c
 	sram[8'h1b] = 'hc;
 	sram[8'h1c] = 'h2;	// or	a, 0(x)
 	sram[8'h1d] = 'h0;	
-	sram[8'h1e] = 'ha;	// movd	0xa(x), a    a->5e
-	sram[8'h1f] = 'he;	
+	sram[8'h1e] = 'ha;	// movd	7(x), a    a->f7
+	sram[8'h1f] = 'h7;	
 	
 	sram[8'h20] = 'h8;	// mov a, #c
 	sram[8'h21] = 'hc;
 	sram[8'h22] = 'h3;	// and	a, 0(x)
 	sram[8'h23] = 'h0;	
-	sram[8'h24] = 'ha;	// movd	0xa(x), a    a->5e
-	sram[8'h25] = 'he;	
+	sram[8'h24] = 'ha;	// movd	7(x), a    a->f7
+	sram[8'h25] = 'h7;	
 	
 	sram[8'h26] = 'h8;	// mov a, #c
 	sram[8'h27] = 'hc;
 	sram[8'h28] = 'h4;	// xor	a, 0(x)
 	sram[8'h29] = 'h0;	
-	sram[8'h2a] = 'ha;	// movd	0xa(x), a    a->5e
-	sram[8'h2b] = 'he;	
+	sram[8'h2a] = 'ha;	// movd	7(x), a    a->f7
+	sram[8'h2b] = 'h7;	
 	
 	sram[8'h2c] = 'h5;	// mov	a, 0(x)
 	sram[8'h2d] = 'h0;	
-	sram[8'h2e] = 'ha;	// movd	0xa(x), a    a->5e
-	sram[8'h2f] = 'he;	
+	sram[8'h2e] = 'ha;	// movd	7(x), a    a->f7
+	sram[8'h2f] = 'h7;	
+
+	sram[8'h30] = 'h9;	// add	a, #5
+	sram[8'h31] = 'h5;	
+	sram[8'h32] = 'ha;	// movd	7(x), a    f->f7
+	sram[8'h33] = 'h7;	
 	
-	sram[8'h30] = 'hf;	// jmp 0x30
-	sram[8'h31] = 'h3;
-	sram[8'h32] = 'h0;
+	sram[8'h34] = 'hc;	// mov	x, #20
+	sram[8'h35] = 'h2;
+	sram[8'h36] = 'h0;
+	sram[8'h37] = 'h7;	// mov	y, x
+	sram[8'h38] = 'h0;
+	sram[8'h39] = 'h5;	// mov	a, 0(y)
+	sram[8'h3a] = 'h8;	
+	sram[8'h3b] = 'ha;	// movd	7(x), a    8->f7
+	sram[8'h3c] = 'h7;	
+	sram[8'h3d] = 'h5;	// mov	a, 1(y)
+	sram[8'h3e] = 'h9;	
+	sram[8'h3f] = 'ha;	// movd	7(x), a    c->f7
+	sram[8'h40] = 'h7;	
+	
+	
+	sram[8'h41] = 'hf;	// jmp 0x41
+	sram[8'h42] = 'h3;
+	sram[8'h43] = 'hd;
 
         $dumpfile ("tb.vcd");
         $dumpvars (0, tb);

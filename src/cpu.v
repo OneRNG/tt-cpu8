@@ -15,11 +15,12 @@ module moonbase_cpu_4bit #( parameter MAX_COUNT = 1000 ) (
     reg       write_data_n;	// write enable for data
     reg       write_ram_n;	// write enable for ram
     reg	      addr_pc;
-    assign addr_out = addr_pc ? r_pc : (r_x+{3'b000, r_tmp});
+    assign addr_out = addr_pc ? r_pc : ((r_tmp[3]?r_y:r_x)+{4'b000, r_tmp[2:0]});
     assign io_out = {strobe_out, strobe_out? addr_out : {1'bx, write_ram_n, write_data_n, r_a}};
 
     reg [6:0]r_pc, c_pc;
     reg [6:0]r_x, c_x;
+    reg [6:0]r_y, c_y;
     reg [3:0]r_a, c_a;	
     reg [2:0]r_tmp2, c_tmp2;	
     reg [3:0]r_tmp, c_tmp;	
@@ -40,28 +41,46 @@ module moonbase_cpu_4bit #( parameter MAX_COUNT = 1000 ) (
 
     // instructions
     //
-    //  0:	add a, v(x)
-    //  1: 	sub a, v(x)
-    //  2:	or a, v(x)
-    //  3:	and a, v(x)
-    //  4:	xor a, v(x)
-    //  5:	mov a, v(x)
-    //  6:	movd a, v(x)
-    //  7:	movd a, v(x) (dup)
+    //  0:	add a, v(x/y)
+    //  1: 	sub a, v(x/y)
+    //  2:	or a, v(x/y)
+    //  3:	and a, v(x/y)
+    //  4:	xor a, v(x/y)
+    //  5:	mov a, v(x/y)
+    //  6:	movd a, v(x/y)
+    //  7: 0	mov y, x
+    //	   1    mov x, y
+    //	   2    add y, #1
+    //	   3    add x, #1
+    //	   4    add y, a
+    //	   5    add x, a
+    //	   6    mov x[3:0], a
+    //	   7    mov a, x[3:0]
     //	8:	mov a, #v
-    //  9:	mov a, #v (dup)
-    //  a:	movd v(x), a
-    //  b:	mov v(x), a
+    //  9:	add a, #v 
+    //  a:	movd v(x/y), a
+    //  b:	mov  v(x/y), a
     //  c:	mov x, #vv
     //  d:	jne a, vv
     //  e:	jeq a, vv
     //  f:	jmp vv
+    //
+    //  Memory access - addresses are 7 bits - v(x/y) is a 3-bit offset v[2:0]
+    //  	if  v[3] it's y+v[2:0]
+    //  	if !v[3] it's x+v[2:0]
+    //
+    //	The general idea is that y normally points to a bank of in sram 8 'registers' while
+    //		x is a more general index register (but you can use both if you need to do
+    //		some copying)
+    //		
+
 
     reg [3:0]r_ins, c_ins;
 	
     always @(*) begin
 	c_ins = r_ins;
 	c_x = r_x;
+	c_y = r_y;
 	c_a = r_a;
 	c_tmp = r_tmp;
 	c_tmp2 = r_tmp2;
@@ -99,7 +118,7 @@ module moonbase_cpu_4bit #( parameter MAX_COUNT = 1000 ) (
 			c_tmp = ram_in;
 			c_pc = r_pc+1;
 			case (r_ins) // synthesis full_case parallel_case
-			8, 9, 10, 11: c_phase = 6;
+			7, 8, 9, 10, 11: c_phase = 6;
 			default:c_phase = 4;
 			endcase
 		end
@@ -121,13 +140,22 @@ module moonbase_cpu_4bit #( parameter MAX_COUNT = 1000 ) (
 	  		addr_pc = 0;
 			c_phase = 0;
 			case (r_ins)// synthesis full_case parallel_case
-			0:	c_a = r_a+r_tmp;
+			0, 9:	c_a = r_a+r_tmp;
 			1:	c_a = r_a-r_tmp;
 			2:	c_a = r_a|r_tmp;
 			3:	c_a = r_a&r_tmp;
 			4:	c_a = r_a^r_tmp;
-			5, 8, 9:c_a = r_tmp;
-			6, 7:   c_a = r_tmp;
+			5, 6, 8:c_a = r_tmp;
+			7:	case (r_tmp) // synthesis full_case parallel_case
+				0: c_y = r_x;			// 0	mov y, x
+    				1: c_x = r_y;			// 1    mov x, y
+    				2: c_y = r_y+1;			// 2    add y, #1
+    				3: c_x = r_x+1;			// 3    add x, #1
+    				4: c_y = r_y+{3'b0, r_a};	// 4    add y, a
+    				5: c_x = r_x+{3'b0, r_a};	// 5    add x, a
+    				6: c_x[3:0] = r_a;		// 6    mov x[3:0], a
+    				7: c_a = r_x[3:0];		// 7    mov a, x[3:0]
+				endcase
 			10, 11: c_phase = 7;
 			12:	c_x = {r_tmp2, r_tmp};
 			13:	c_pc = (r_a != 0) ? {r_tmp2, r_tmp} : r_pc; 
@@ -147,6 +175,7 @@ module moonbase_cpu_4bit #( parameter MAX_COUNT = 1000 ) (
     always @(posedge clk) begin
 	r_a <= c_a;
 	r_x <= c_x;
+	r_y <= c_y;
 	r_ins <= c_ins;
 	r_tmp <= c_tmp;
 	r_tmp2 <= c_tmp2;
