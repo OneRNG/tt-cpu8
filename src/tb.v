@@ -10,25 +10,103 @@ module tb (
     // testbench is controlled by test.py
     input clk,
     input rst,
-    output [6:0] segments
+    output data_write,
+    output [3:0] data_out
    );
+
+    
 
     // this part dumps the trace to a vcd file that can be viewed with GTKWave
     initial begin
+	sram[8'h00] = 'h8;	// mov a, #0
+	sram[8'h01] = 'h0;
+	sram[8'h02] = 'hc;	// mov x, #0x50
+	sram[8'h03] = 'h5;
+	sram[8'h04] = 'h0;
+	sram[8'h05] = 'ha;	// movd	0xa(x), a    a->5e
+	sram[8'h06] = 'he;	
+	sram[8'h07] = 'hb;	// mov 0(x), a
+	sram[8'h08] = 'h0;	
+	sram[8'h09] = 'h8;	// mov	a, #1
+	sram[8'h0a] = 'h1;	
+	sram[8'h0b] = 'h0;	// add	a, 0(x)
+	sram[8'h0c] = 'h0;	
+	sram[8'h0d] = 'hd;	// jne a, 0x05
+	sram[8'h0e] = 'h0;
+	sram[8'h0f] = 'h5;
+
+	sram[8'h10] = 'h8;	// mov a, #a
+	sram[8'h11] = 'ha;
+	sram[8'h12] = 'hb;	// mov	0(x), a    
+	sram[8'h13] = 'h0;	
+
+	sram[8'h14] = 'h8;	// mov a, #c
+	sram[8'h15] = 'hc;
+	sram[8'h16] = 'h1;	// sub	a, 0(x)
+	sram[8'h17] = 'h0;	
+	sram[8'h18] = 'ha;	// movd	0xa(x), a    a->5e
+	sram[8'h19] = 'he;	
+	
+	sram[8'h1a] = 'h8;	// mov a, #c
+	sram[8'h1b] = 'hc;
+	sram[8'h1c] = 'h2;	// or	a, 0(x)
+	sram[8'h1d] = 'h0;	
+	sram[8'h1e] = 'ha;	// movd	0xa(x), a    a->5e
+	sram[8'h1f] = 'he;	
+	
+	sram[8'h20] = 'h8;	// mov a, #c
+	sram[8'h21] = 'hc;
+	sram[8'h22] = 'h3;	// and	a, 0(x)
+	sram[8'h23] = 'h0;	
+	sram[8'h24] = 'ha;	// movd	0xa(x), a    a->5e
+	sram[8'h25] = 'he;	
+	
+	sram[8'h26] = 'h8;	// mov a, #c
+	sram[8'h27] = 'hc;
+	sram[8'h28] = 'h4;	// xor	a, 0(x)
+	sram[8'h29] = 'h0;	
+	sram[8'h2a] = 'ha;	// movd	0xa(x), a    a->5e
+	sram[8'h2b] = 'he;	
+	
+	sram[8'h2c] = 'h5;	// mov	a, 0(x)
+	sram[8'h2d] = 'h0;	
+	sram[8'h2e] = 'ha;	// movd	0xa(x), a    a->5e
+	sram[8'h2f] = 'he;	
+	
+	sram[8'h30] = 'hf;	// jmp 0x30
+	sram[8'h31] = 'h3;
+	sram[8'h32] = 'h0;
+
         $dumpfile ("tb.vcd");
         $dumpvars (0, tb);
         #1;
     end
 
     // wire up the inputs and outputs
-    wire [7:0] inputs = {6'b0, rst, clk};
+    reg  [1:0]data_in;
+    wire [3:0]sram_out;
+    wire [7:0] inputs = {data_in, sram_out, rst, clk};
     wire [7:0] outputs;
-    assign segments = outputs[6:0];
+    assign data_out = outputs[3:0];
+    assign data_write = outputs[7] ? 1 : outputs[4]; // negative data strobe
 
     // instantiate the DUT
-    seven_segment_seconds #(.MAX_COUNT(100)) seven_segment_seconds(
+    cpu_4bit #(.MAX_COUNT(100)) cpu(
         .io_in  (inputs),
         .io_out (outputs)
         );
+
+    reg [6:0]latch;
+    always @(*)
+    if (outputs[7])
+	latch = outputs[6:0];
+
+    reg [3:0]sram[0:127];
+    assign sram_out = sram[latch];
+    always @(outputs) #0.01
+    if (!outputs[5] && !outputs[7])
+	sram[latch] = outputs[3:0];
+
+
 
 endmodule

@@ -3,9 +3,8 @@
 project:
   wokwi_id:    0        # If using wokwi, set this to your project's ID
   source_files:        # If using an HDL, set wokwi_id as 0 and uncomment and list your source files here. Source files must be in ./src
-    - counter.v
-    - decoder.v
-  top_module:  "seven_segment_seconds"      # put the name of your top module here, make it unique by prepending your github username
+    - cpu.v
+  top_module:  "cpu_4bit"      # put the name of your top module here, make it unique by prepending your github username
 
 # As everyone will have access to all designs, try to make it easy for someone new to your design to know what
 # it does and how to operate it.
@@ -14,13 +13,13 @@ project:
 #
 # This info will be automatically collected and used to make a datasheet for the chip.
 documentation: 
-  author:       "Matt Venn"      # Your name
-  discord:      "mattvenn"      # Your discord handle
-  title:        "7 segment seconds"      # Project title
-  description:  "count up to 10, one second at a time"      # Short description of what your project does
-  how_it_works: "uses a register and some combinational logic"      # Longer description of how the project works
-  how_to_test:  "after reset, the counter should increase by one every second"      # Instructions on how someone could test your project, include things like what buttons do what and how to set the clock if needed
-  external_hw:  ""      # Describe any external hardware needed
+  author:       "Paul Campell"      # Your name
+  discord:      "none"      # Your discord handle
+  title:        "4 bit CPU"      # Project title
+  description:  "simple cpu"      # Short description of what your project does
+  how_it_works: "verilog source"      # Longer description of how the project works
+  how_to_test:  "needs a 7-bit external address latch and SRAM"      # Instructions on how someone could test your project, include things like what buttons do what and how to set the clock if needed
+  external_hw:  "sram, latch"      # Describe any external hardware needed
   language:     "verilog" # other examples include Verilog, Amaranth, VHDL, etc
   doc_link:     ""      # URL to longer form documentation, eg the README.md in your repository
   clock_hz:     1000       # Clock frequency in Hz (if required)
@@ -28,19 +27,19 @@ documentation:
   inputs:               # a description of what the inputs do
     - clock
     - reset
-    - none
-    - none
-    - none
-    - none
-    - none
-    - none
+    - ram_data0  # data in from RAM
+    - ram_data1
+    - ram_data2
+    - ram_data3
+    - io_data0   # IO in
+    - io_data1
   outputs:
-    - segment a         # a description of what the outputs do
-    - segment b
-    - segment c
-    - segment d
-    - segment e
-    - segment f
-    - segment g
-    - none
+    - data_out_0     # data bus
+    - data_out_1
+    - data_out_2
+    - data_out_3
+    - write_data_n   # write strobe* for external data
+    - write_ram_n    # write strobe* for sram (hook this and strobe to a MWS5101AEL3)
+    - a              # address upper bit
+    - strobe         # when asserted address latch is loaded from the next 7 bits
 
