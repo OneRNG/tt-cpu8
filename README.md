@@ -21,12 +21,10 @@ There are 25 instructions:
 - 6 v:	 movd a, v(x/y)
 - 7 0:	 mov y, x
 - 7 1:   swap x, y
-- 7 2:   mov x[3:0], a
+- 7 2:   mov x.l, a
 - 7 3:   mov a, x[3:0]
-- 7 4:   add y, a
-- 7 5:   add x, a
-- 7 6:   add y, #1
-- 7 7:   add x, #1
+- 7 4:   add a, c
+- 7 5:   mov x.h, a
 - 8 v:	 mov a, #v
 - 9 v:	 add a, #v 
 - a v:	 movd v(x/y), a
