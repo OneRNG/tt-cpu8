@@ -26,10 +26,10 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	//
 	//	SRAM address space (data accesses):
 	//		0-127	external
-	//		128-139 internal	(internal ram cells, for filling up the die :-)
+	//		128-131 internal	(internal ram cells, for filling up the die :-)
 	//
 
-	localparam N_LOCAL_RAM = 32;
+	localparam N_LOCAL_RAM = 24;
      
     wire clk			= io_in[0];
     wire reset			= io_in[1];
