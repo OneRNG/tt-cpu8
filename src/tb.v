@@ -91,11 +91,41 @@ module tb (
 	sram[8'h3e] = 'h9;	
 	sram[8'h3f] = 'ha;	// movd	7(x), a    c->f7
 	sram[8'h40] = 'h7;	
+
+	sram[8'h41] = 'hf;	// call XX
+	sram[8'h42] = 'hc;
+	sram[8'h43] = 'h9;
+	sram[8'h44] = 'ha;	// movd	7(x), a    f->f7
+	sram[8'h45] = 'h7;	
+
+	sram[8'h46] = 'hf;	// jmp NN
+	sram[8'h47] = 'h5;
+	sram[8'h48] = 'ha;
 	
+	sram[8'h49] = 'h9;	//XX: add	a, #1
+	sram[8'h4a] = 'h1;	
+	sram[8'h4b] = 'ha;	//    movd	7(x), a    d->f7
+	sram[8'h4c] = 'h7;	
+	sram[8'h4d] = 'hf;	//    call YY
+	sram[8'h4e] = 'hd;
+	sram[8'h4f] = 'h4;
+	sram[8'h50] = 'h9;	//    add	a, #1
+	sram[8'h51] = 'h1;	
+	sram[8'h52] = 'h7;	//    ret
+	sram[8'h53] = 'h3;	
+
+	sram[8'h54] = 'h9;	//YY:    add	a, #1
+	sram[8'h55] = 'h1;	
+	sram[8'h56] = 'ha;	//       movd	7(x), a    e->f7
+	sram[8'h57] = 'h7;	
+	sram[8'h58] = 'h7;	//       ret
+	sram[8'h59] = 'h3;	
+
+				//NN:
 	
-	sram[8'h41] = 'hf;	// jmp 0x41
-	sram[8'h42] = 'h3;
-	sram[8'h43] = 'hd;
+	sram[8'h5a] = 'hf;	// jmp 0x41
+	sram[8'h5b] = 'h5;
+	sram[8'h5c] = 'ha;
 
         $dumpfile ("tb.vcd");
         $dumpvars (0, tb);

@@ -185,7 +185,7 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				8:	c_a = r_tmp;								// mov  a, #v
 				7:	case (r_tmp) // synthesis full_case parallel_case
     				0: begin c_x = r_y; c_y = r_x; end			// 0    swap  y, x
-					1: c_a = r_a+{3'b000, r_c};					// 1	add   a, x
+					1: c_a = r_a+{3'b000, r_c};					// 1	add   a, c
     				2: c_x[3:0] = r_a;							// 2    mov   x.l, a
     				3: begin									// 3    ret
 							c_pc = r_s0;
