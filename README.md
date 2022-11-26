@@ -10,33 +10,35 @@ It has a 4-bit accumulator, a 7-bit PC, 2 7-bit index registers and a carry bit.
 
 The main limitations are the 6/8-bit bus - it's designed to run with an external SRAM and a 7-bit address latch, code is loaded externally.
 
-There are 25 instructions:
+There are 25 instructions. each 2 or 3 nibbles:
 
-- 0 v:	 add a, v(x/y)	- sets C
-- 1 v: 	 sub a, v(x/y)	- sets C
-- 2 v:	 or a, v(x/y)
-- 3 v:	 and a, v(x/y)
-- 4 v:	 xor a, v(x/y)
-- 5 v:	 mov a, v(x/y)
-- 6 v:	 movd a, v(x/y)
+- 0 V:	 add a, V(x/y)	- sets C
+- 1 V: 	 sub a, V(x/y)	- sets C
+- 2 V:	 or a, V(x/y)
+- 3 V:	 and a, V(x/y)
+- 4 V:	 xor a, V(x/y)
+- 5 V:	 mov a, V(x/y)
+- 6 V:	 movd a, V(x/y)
 - 7 0:	 swap x, y
 - 7 1:   add a, c
 - 7 2:   mov x.l, a
 - 7 3:   ret
 - 7 4:   add y, a
-￼- 7 5:   add x, a
-￼- 7 6:   add y, #1
+- 7 5:   add x, a
+- 7 6:   add y, #1
 - 7 6:   add x, #1
-- 8 v:	 mov a, #v
-- 9 v:	 add a, #v 
-- a v:	 movd v(x/y), a
-- b v: 	 mov  v(x/y), a
-- c h l: mov x, #hl
-- d h l: jne a/c, hl	if h[3] the test c otherwise test a
-- e h l: jeq a/c, hl	if h[3] the test c otherwise test a
-- f h l: jmp/call hl
+- 8 V:	 mov a, #V
+- 9 V:	 add a, #V 
+- a V:	 movd V(x/y), a
+- b V: 	 mov  V(x/y), a
+- c H L: mov x, #hl
+- d H L: jne a/c, hl	if H[3] the test c otherwise test a
+- e H L: jeq a/c, hl	if H[3] the test c otherwise test a
+- f H L: jmp/call hl    if H[3] call else jmp
 
-Memory references are a 3 bit (8 byte) offset from the x or y index registers - the general idea is that the y register points to an 8 register scratch pad block (a bit like an 8051) but can also be repurposed for copies when required.
+Memory is 128/256 (128 unified or 128xcode+128xdata) 4-bit nibbles, references are a 3 bit (8 nibble) offset from the X or Y index registers - the general idea is that the Y register points to an 8 register scratch pad block (a bit like an 8051) but can also be repurposed for copies when required.
+
+There is a 4-deep hardware call stack.
 
 
 # What is Tiny Tapeout?

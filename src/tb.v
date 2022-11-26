@@ -127,8 +127,10 @@ module tb (
 	sram[8'h5b] = 'h5;
 	sram[8'h5c] = 'ha;
 
-        //$dumpfile ("tb.vcd");
-        //$dumpvars (0, tb);
+`ifdef LOCAL_TEST
+        $dumpfile ("tb.vcd");
+        $dumpvars (0, tb);
+`endif
         #1;
     end
 
