@@ -20,8 +20,8 @@ module tb (
     initial begin
 	sram[8'h00] = 'h8;	// mov a, #0
 	sram[8'h01] = 'h0;
-	sram[8'h02] = 'hc;	// mov x, #0x50
-	sram[8'h03] = 'hf;
+	sram[8'h02] = 'hc;	// mov x, #0x80
+	sram[8'h03] = 'h8;
 	sram[8'h04] = 'h0;
 	sram[8'h05] = 'ha;	// movd	7(x), a    a->f7
 	sram[8'h06] = 'h7;	

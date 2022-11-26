@@ -23,6 +23,8 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	//		external devices can be written from io_out[3:0] (at address pointed to by the address latch)
 	//			when io_out[7] is 0 and io_out[4] is 0
 	//
+
+	localparam N_LOCAL_RAM = 16;
      
     wire clk			= io_in[0];
     wire reset			= io_in[1];
@@ -34,12 +36,16 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     reg       write_ram_n;	// write enable for ram
     reg	      addr_pc;
     reg	      data_pc;
-    wire [6:0]addr_out = addr_pc ? r_pc : ((r_tmp[3]?r_y:r_x)+{4'b000, r_tmp[2:0]});					  // address out mux (PC or X/Y+off)
-    assign    io_out   = {strobe_out, strobe_out? addr_out : {data_pc, write_ram_n, write_data_n, r_a}};  // mux address and data out
+	wire [6:0]data_addr = ((r_tmp[3]?r_y[6:0]:r_x[6:0])+{4'b000, r_tmp[2:0]});
+	wire	  is_local_ram = (r_tmp[3]?r_y[7]:r_x[7]);
+	wire	  write_local_ram = is_local_ram & !write_ram_n;
+	wire [$clog2(N_LOCAL_RAM)-1:0]local_ram_addr = data_addr[$clog2(N_LOCAL_RAM)-1:0];
+    wire [6:0]addr_out = addr_pc ? r_pc : data_addr;							// address out mux (PC or X/Y+off)
+    assign    io_out   = {strobe_out, strobe_out? addr_out : {data_pc, write_ram_n|is_local_ram, write_data_n, r_a}};  // mux address and data out
 
     reg  [6:0]r_pc, c_pc;	// program counter	// actual flops in the system 
-    reg  [6:0]r_x, c_x;		// x index register	// by convention r_* is a flop, c_* is the combinatorial that feeds it
-    reg  [6:0]r_y, c_y;		// y index register
+    reg  [7:0]r_x, c_x;		// x index register	// by convention r_* is a flop, c_* is the combinatorial that feeds it
+    reg  [7:0]r_y, c_y;		// y index register
     reg  [3:0]r_a, c_a;		// accumulator
     reg       r_c, c_c;		// carry flag
     reg  [3:0]r_tmp2, c_tmp2;// operand temp (high)
@@ -105,6 +111,14 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	wire [6:0]c_i_add = (r_tmp[0]?r_x:r_y)+(r_tmp[1]?7'b1:{3'b0, r_a});
 	wire [6:0]c_pc_inc = r_pc+1;
 
+	
+	reg	 [3:0] r_local_ram[0:N_LOCAL_RAM-1];
+
+	wire [3:0] local_ram = r_local_ram[local_ram_addr];
+	always @(posedge clk)
+	if (write_local_ram)
+		r_local_ram[local_ram_addr] <= r_a;
+
     always @(*) begin
 		c_ins  = r_ins;	
 		c_x    = r_x;
@@ -164,7 +178,7 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				strobe_out = 0;
 				data_pc = r_ins[3:2] == 3;
 				c_tmp2 = r_tmp;				// low->high for 2 byte cases
-				c_tmp = (r_ins[3:1] == 3?{2'b0,data_in}:ram_in);	// read the actial data, movd comes from upper bits
+				c_tmp = (r_ins[3:1] == 3?{2'b0,data_in}:is_local_ram&&r_ins[3:2] != 3?local_ram:ram_in);	// read the actial data, movd comes from upper bits
 				if (r_ins[3:2] == 3)		// if we fetched from PC increment it
 					c_pc = c_pc_inc;
 				c_phase = 6;
@@ -201,7 +215,7 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 					endcase
 				10,												// movd v(x), a
 				11:	c_phase = 7;								// mov  v(x), a
-				12:	c_x  = {r_tmp2[2:0], r_tmp};				// mov  x, #VV
+				12:	c_x  = {r_tmp2, r_tmp};						// mov  x, #VV
 				13:	c_pc = (r_tmp2[3]?!r_c : r_a != 0) ? {r_tmp2[2:0], r_tmp} : r_pc; // jne	a/c, VV
 				14:	c_pc = (r_tmp2[3]? r_c : r_a == 0) ? {r_tmp2[2:0], r_tmp} : r_pc; // jeq        a/c, VV
 				15:	begin c_pc = {r_tmp2[2:0], r_tmp};				// jmp  VV
