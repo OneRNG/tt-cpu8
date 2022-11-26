@@ -36,7 +36,7 @@ There are 25 instructions. each 2 or 3 nibbles:
 - e H L: jeq a/c, hl	if H[3] the test c otherwise test a
 - f H L: jmp/call hl    if H[3] call else jmp
 
-Memory is 128/256 (128 unified or 128xcode+128xdata) 4-bit nibbles, references are a 3 bit (8 nibble) offset from the X or Y index registers - the general idea is that the Y register points to an 8 register scratch pad block (a bit like an 8051) but can also be repurposed for copies when required.
+Memory is 128/256 (128 unified or 128xcode+128xdata) 4-bit nibbles, references are a 3 bit (8 nibble) offset from the X or Y index registers - the general idea is that the Y register points to an 8 register scratch pad block (a bit like an 8051) but can also be repurposed for copies when required. There is an on-chip SRAM block for data access only (addressed with the MSB of the data address) - mostly just to soak up any additional gates.
 
 There is a 4-deep hardware call stack.
 
