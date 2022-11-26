@@ -44,6 +44,10 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     reg       r_c, c_c;		// carry flag
     reg  [3:0]r_tmp2, c_tmp2;// operand temp (high)
     reg  [3:0]r_tmp,  c_tmp;// operand temp (low)
+	reg  [6:0]r_s0,   c_s0;	// call stack
+	reg  [6:0]r_s1,   c_s1;
+	reg  [6:0]r_s2,   c_s2;
+	reg  [6:0]r_s3,   c_s3;
 
     //
     //	phase:
@@ -71,7 +75,7 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     //  7 0:	swap x, y
     //	  1:    add a, c
     //	  2:    mov x.l, a
-    //	  3:    mov a, x[3:0]
+    //	  3:    ret
 	//    4:    add y, a
     //	  5:    add x, a
 	//    6:    add y, #1
@@ -83,7 +87,7 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     //  c h l:	mov x, #hl
     //  d h l:	jne a/c, hl	if h[3] the test c otherwise test a
     //  e h l:	jeq a/c, hl	if h[3] the test c otherwise test a
-    //  f h l:	jmp hl
+    //  f h l:	jmp/call hl
     //
     //  Memory access - addresses are 7 bits - v(X/y) is a 3-bit offset v[2:0]
     //  	if  v[3] it's Y+v[2:0]
@@ -106,6 +110,10 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		c_x    = r_x;
 		c_y    = r_y;
 		c_a    = r_a;
+		c_s0   = r_s0;
+		c_s1   = r_s1;
+		c_s2   = r_s2;
+		c_s3   = r_s3;
 		c_tmp  = r_tmp;
 		c_tmp2 = r_tmp2;
 		c_pc   = r_pc;
@@ -179,7 +187,12 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     				0: begin c_x = r_y; c_y = r_x; end			// 0    swap  y, x
 					1: c_a = r_a+{3'b000, r_c};					// 1	add   a, x
     				2: c_x[3:0] = r_a;							// 2    mov   x.l, a
-    				3: c_a = r_x[3:0];							// 3    mov   a, x[3:0]
+    				3: begin									// 3    ret
+							c_pc = r_s0;
+							c_s0 = r_s1;
+							c_s1 = r_s2;
+							c_s2 = r_s3;
+					   end
 					4: c_y = c_i_add;							// 4    add   y, a
 					5: c_x = c_i_add;							// 5    add   x, a
 					6: c_y = c_i_add;							// 6    add   y, #1
@@ -191,7 +204,14 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				12:	c_x  = {r_tmp2[2:0], r_tmp};				// mov  x, #VV
 				13:	c_pc = (r_tmp2[3]?!r_c : r_a != 0) ? {r_tmp2[2:0], r_tmp} : r_pc; // jne	a/c, VV
 				14:	c_pc = (r_tmp2[3]? r_c : r_a == 0) ? {r_tmp2[2:0], r_tmp} : r_pc; // jeq        a/c, VV
-				15:	c_pc = {r_tmp2[2:0], r_tmp};				// jmp  VV
+				15:	begin c_pc = {r_tmp2[2:0], r_tmp};				// jmp  VV
+						if (r_tmp2[3]) begin	// call
+							c_s0 = r_pc;
+							c_s1 = r_s0;
+							c_s2 = r_s1;
+							c_s3 = r_s2;
+						end
+					end
 				endcase
 			end
 		7:	begin						// 7 write data stage - assert appropriate write strobe
@@ -214,6 +234,10 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		r_tmp2  <= c_tmp2;
 		r_pc    <= c_pc;
 		r_phase <= c_phase;
+		r_s0    <= c_s0;
+		r_s1    <= c_s1;
+		r_s2    <= c_s2;
+		r_s3    <= c_s3;
     end
 
 endmodule

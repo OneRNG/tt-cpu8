@@ -22,7 +22,7 @@ There are 25 instructions:
 - 7 0:	 swap x, y
 - 7 1:   add a, c
 - 7 2:   mov x.l, a
-- 7 3:   mov a, x[3:0]
+- 7 3:   ret
 - 7 4:   add y, a
 ￼- 7 5:   add x, a
 ￼- 7 6:   add y, #1
@@ -34,7 +34,7 @@ There are 25 instructions:
 - c h l: mov x, #hl
 - d h l: jne a/c, hl	if h[3] the test c otherwise test a
 - e h l: jeq a/c, hl	if h[3] the test c otherwise test a
-- f h l: jmp hl
+- f h l: jmp/call hl
 
 Memory references are a 3 bit (8 byte) offset from the x or y index registers - the general idea is that the y register points to an 8 register scratch pad block (a bit like an 8051) but can also be repurposed for copies when required.
 
