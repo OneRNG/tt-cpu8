@@ -5,6 +5,9 @@
 SIM ?= icarus
 TOPLEVEL_LANG ?= verilog
 
+ifeq ($(LOCAL),yes)
+COMPILE_ARGS    += -DLOCAL_TEST
+endif
 ifneq ($(GATES),yes)
 # normal simulation
 VERILOG_SOURCES += $(PWD)/tb.v $(PWD)/cpu.v 
