@@ -23,8 +23,13 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	//		external devices can be written from io_out[3:0] (at address pointed to by the address latch)
 	//			when io_out[7] is 0 and io_out[4] is 0
 	//
+	//
+	//	SRAM address space (data accesses):
+	//		0-127	external
+	//		128-139 internal	(internal ram cells, for filling up the die :-)
+	//
 
-	localparam N_LOCAL_RAM = 16;
+	localparam N_LOCAL_RAM = 32;
      
     wire clk			= io_in[0];
     wire reset			= io_in[1];
