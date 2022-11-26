@@ -14,7 +14,7 @@ project:
 # This info will be automatically collected and used to make a datasheet for the chip.
 documentation: 
   author:       "Paul Campell"      # Your name
-  discord:      "none"      # Your discord handle
+  discord:      "Taniwha"      # Your discord handle
   title:        "4 bit CPU"      # Project title
   description:  "simple cpu"      # Short description of what your project does
   how_it_works: "verilog source"      # Longer description of how the project works
