@@ -68,12 +68,14 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     //  4 v:	xor a, v(x/y)
     //  5 v:	mov a, v(x/y)
     //  6 v:	movd a, v(x/y)
-    //  7 0:	mov y, x
-    //	  1:    swap x, y
+    //  7 0:	swap x, y
+    //	  1:    add a, c
     //	  2:    mov x.l, a
     //	  3:    mov a, x[3:0]
-	//	  4:    add a, c
-    //	  5:    mov x.h, a
+	//    4:    add y, a
+    //	  5:    add x, a
+	//    6:    add y, #1
+	//    7:    add x, #1
     //	8 v:	mov a, #v
     //  9 v:	add a, #v 
     //  a v:	movd v(x/y), a
@@ -96,6 +98,7 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 
 	wire [4:0]c_add = {1'b0, r_a}+{1'b0, r_tmp};	// ALUs
 	wire [4:0]c_sub = {1'b0, r_a}-{1'b0, r_tmp};
+	wire [6:0]c_i_add = (r_tmp[0]?r_x:r_y)+(r_tmp[1]?7'b1:{3'b0, r_a});
 	wire [6:0]c_pc_inc = r_pc+1;
 
     always @(*) begin
@@ -173,12 +176,14 @@ module moonbase_cpu_4bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				6,												// movd a, v(x)
 				8:	c_a = r_tmp;								// mov  a, #v
 				7:	case (r_tmp) // synthesis full_case parallel_case
-					0: c_y = r_x;								// 0	mov   y, x
-    				1: begin c_x = r_y; c_y = r_x; end			// 1    swap  y, x
+    				0: begin c_x = r_y; c_y = r_x; end			// 0    swap  y, x
+					1: c_a = r_a+{3'b000, r_c};					// 1	add   a, x
     				2: c_x[3:0] = r_a;							// 2    mov   x.l, a
     				3: c_a = r_x[3:0];							// 3    mov   a, x[3:0]
-					4: c_a = r_a+{3'b0,r_c};					// 4	add   a, c
-    				5: c_x[6:4] = r_a[2:0];						// 5    mov   x.h, a
+					4: c_y = c_i_add;							// 4    add   y, a
+					5: c_x = c_i_add;							// 5    add   x, a
+					6: c_y = c_i_add;							// 6    add   y, #1
+					7: c_x = c_i_add;							// 7    add   y, #1
 					default: ;
 					endcase
 				10,												// movd v(x), a
