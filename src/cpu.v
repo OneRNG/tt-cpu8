@@ -133,7 +133,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	wire [6:0]c_i_add = (r_v[0]?r_x:r_y)+(r_v[1]?8'b1:r_a);
 	wire [6:0]c_pc_inc = r_pc+1;
 
-	
+`ifdef NOTDEF
 	reg	 [3:0] r_local_ram0[0:N_LOCAL_RAM-1];
 	reg	 [3:0] r_local_ram1[0:N_LOCAL_RAM-1];
 
@@ -144,6 +144,9 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	always @(posedge clk)
 	if (write_local_ram && r_nibble)
 		r_local_ram1[local_ram_addr] <= r_a[7:4];
+`else
+	wire [3:0] local_ram = 0;
+`endif
 
     always @(*) begin
 		c_ins  = r_ins;	
