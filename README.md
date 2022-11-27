@@ -23,9 +23,9 @@ There are 33 instructions. each 1 or 2 bytes:
     4v:		xor a, v(x/y)
     5v:		mov a, v(x/y)
     6v:		movd a, v(x/y)
-    77:		swap x, y
-    71:		add a, c
-    72:		mov x.l, a
+    70:		add a, c
+    71:		inc a
+    72:		swap x, y
     73:		ret
     74:		add y, a
     75:		add x, a

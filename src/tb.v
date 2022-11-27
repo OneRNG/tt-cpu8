@@ -62,10 +62,10 @@ module tb (
 	sram[8'h21] = 'h05;	
 	sram[8'h22] = 'ha7;	// movd	7(x), a    f->f7
 	
-	sram[8'h23] = 'h70;	// swap	y, x	   y-f7
+	sram[8'h23] = 'h72;	// swap	y, x	   y-f7
 	sram[8'h24] = 'hf3;	// mov	x, #20
 	sram[8'h25] = 'h20;
-	sram[8'h26] = 'h70;	// swap	y, x
+	sram[8'h26] = 'h72;	// swap	y, x
 	sram[8'h27] = 'h58;	// mov	a, 0(y)
 	sram[8'h28] = 'ha7;	// movd	7(x), a    f1->f7
 	sram[8'h29] = 'h59;	// mov	a, 1(y)

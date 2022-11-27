@@ -86,9 +86,9 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     //  4v:		xor a, v(x/y)
     //  5v:		mov a, v(x/y)
     //  6v:		movd a, v(x/y)
-    //  77:		swap x, y
-    //	71:		add a, c
-    //	72:		mov x.l, a
+    //	70:		add a, c
+    //	71:		inc a
+    //  72:		swap x, y
     //	73:		ret
 	//  74:		add y, a
     //	75:		add x, a
@@ -230,9 +230,9 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				5,													// mov  a, v(x)
 				6:	c_a = {r_h, r_l};								// movd a, v(x)
 				7:	case (r_v) // synthesis full_case parallel_case
-    				0: begin c_x = r_y; c_y = r_x; end			// 0    swap  y, x
-					1: c_a = r_a+{7'b000, r_c};					// 1	add   a, c
-    				2: c_x[3:0] = r_a;							// 2    mov   x.l, a
+					0: c_a = r_a+{7'b000, r_c};					// 1	add   a, c
+    				1: c_a = r_a + 1;							// 2    inc   a
+    				2: begin c_x = r_y; c_y = r_x; end			// 0    swap  y, x
     				3: begin									// 3    ret
 							c_pc = r_s0;
 							c_s0 = r_s1;
