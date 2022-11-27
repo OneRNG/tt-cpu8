@@ -21,7 +21,7 @@ module tb (
     initial begin
 	sram[8'h00] = 'hf0;	// mov a, #15
 	sram[8'h01] = 'h0f;	
-	sram[8'h02] = 'hf2;	// mov x, #0x80
+	sram[8'h02] = 'hf3;	// mov x, #0x80
 	sram[8'h03] = 'h80;
 	sram[8'h04] = 'ha7;	// gg:	movd	7(x), a    0->f7
 	sram[8'h05] = 'hb0;	//	mov 0(x), a
@@ -63,7 +63,7 @@ module tb (
 	sram[8'h22] = 'ha7;	// movd	7(x), a    f->f7
 	
 	sram[8'h23] = 'h70;	// swap	y, x	   y-f7
-	sram[8'h24] = 'hf2;	// mov	x, #20
+	sram[8'h24] = 'hf3;	// mov	x, #20
 	sram[8'h25] = 'h20;
 	sram[8'h26] = 'h70;	// swap	y, x
 	sram[8'h27] = 'h58;	// mov	a, 0(y)
