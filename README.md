@@ -48,11 +48,11 @@ There are 33 instructions. each 1 or 2 bytes:
     ev:		nop
     f0 HL:	mov a, #HL
     f1 HL:	add a, #HL
-    f2 HL:	mov y, #hl
-    f3 HL:	mov x, #hl
-    f4 HL:	jne a/c, hl	if h[3] the test c otherwise test a
-    f5 HL:	jeq a/c, hl	if h[3] the test c otherwise test a
-    f6 HL:	jmp/call hl
+    f2 HL:	mov y, #HL
+    f3 HL:	mov x, #HL
+    f4 HL:	jne a/c, HL	if h[3] the test c otherwise test a
+    f5 HL:	jeq a/c, HL	if h[3] the test c otherwise test a
+    f6 HL:	jmp/call HL
     f7 HL:	nop
     
 Memory is 128/256 (128 unified or 128xcode+128xdata) 4-bit nibbles, references are a 3 bit (8 byte) offset from the X or Y index registers - the general idea is that the Y register points to an 8 register scratch pad block (a bit like an 8051) but can also be repurposed for copies when required. There is an on-chip SRAM block for data access only (addressed with the MSB of the data address) - mostly just to soak up any additional gates.

@@ -111,11 +111,11 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	//	ev:		nop
     //	f0 HL:	mov a, #HL
     //  f1 HL:	add a, #HL
-    //  f2 HL:	mov y, #hl
-    //  f3 HL:	mov x, #hl
-    //  f4 HL:	jne a/c, hl	if h[3] the test c otherwise test a
-    //  f5 HL:	jeq a/c, hl	if h[3] the test c otherwise test a
-    //  f6 HL:	jmp/call hl
+    //  f2 HL:	mov y, #HL
+    //  f3 HL:	mov x, #HL
+    //  f4 HL:	jne a/c, HL	if H[3] the test c otherwise test a
+    //  f5 HL:	jeq a/c, HL	if H[3] the test c otherwise test a
+    //  f6 HL:	jmp/call HL
 	//	f7 HL:	nop
     //
     //  Memory access - addresses are 7 bits - v(X/y) is a 3-bit offset v[2:0]
@@ -167,6 +167,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		data_pc = 'bx;
 		c_nibble = 'bx;
     	if (reset) begin	// reset clears the state machine and sets PC to 0
+			c_y = 0x80;	// point at internal sram
 			c_pc = 0;
 			c_phase = 0;
 			strobe_out = 1;
@@ -178,14 +179,14 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				c_nibble = 0;
 				c_phase = 1;
 			end
-    	1:	begin					// 1: read data in
+    	1:	begin					// 1: read data in r_ins
 				strobe_out = 0;
 				data_pc = 1;
 				c_ins = ram_in;
 				c_nibble = 1;
 				c_phase = 2;
 			end
-    	2:	begin					// 3: read data in v
+    	2:	begin					// 3: read data in r_v
 				strobe_out = 0;
 				data_pc = 1;
 				c_v = ram_in;
@@ -201,14 +202,14 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				c_nibble = 0;
 				c_phase = 5;
 			end
-		5:	begin						// 5 read next operand
+		5:	begin						// 5 read next operand	r_hi
 				strobe_out = 0;
 				c_nibble = 1;
 				data_pc = r_ins == 4'hf;
 				c_h = ((r_ins[3:1] == 3)? 4'b0 : (is_local_ram&&r_ins != 4'hf)?local_ram:ram_in);
 				c_phase = 6;
 			end
-		6:	begin						// 5 read next operand
+		6:	begin						// 5 read next operand	r_lo
 				strobe_out = 0;
 				data_pc = r_ins == 4'hf;
 				c_l = ((r_ins[3:1] == 3)?{2'b0,data_in}:(is_local_ram&&r_ins != 4'hf)?local_ram:ram_in);	// read the actial data, movd comes from upper bits
@@ -224,15 +225,15 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				case (r_ins)// synthesis full_case parallel_case
 				0:	begin c_c = c_add[8]; c_a = c_add[7:0]; end	// add  a, v(x)
 				1:	begin c_c = c_sub[8]; c_a = c_sub[7:0]; end	// sub  a, v(x)
-				2:	c_a = r_a|{r_h, r_l};							// or   a, v(x)
-				3:	c_a = r_a&{r_h, r_l};							// sub  a, v(x)
-				4:	c_a = r_a^{r_h, r_l};							// xor  a, v(x)
-				5,													// mov  a, v(x)
-				6:	c_a = {r_h, r_l};								// movd a, v(x)
+				2:	c_a = r_a|{r_h, r_l};						// or   a, v(x)
+				3:	c_a = r_a&{r_h, r_l};						// sub  a, v(x)
+				4:	c_a = r_a^{r_h, r_l};						// xor  a, v(x)
+				5,												// mov  a, v(x)
+				6:	c_a = {r_h, r_l};							// movd a, v(x)
 				7:	case (r_v) // synthesis full_case parallel_case
-					0: c_a = r_a+{7'b000, r_c};					// 1	add   a, c
-    				1: c_a = r_a + 1;							// 2    inc   a
-    				2: begin c_x = r_y; c_y = r_x; end			// 0    swap  y, x
+					0: c_a = r_a+{7'b000, r_c};					// 0	add   a, c
+    				1: c_a = r_a + 1;							// 1    inc   a
+    				2: begin c_x = r_y; c_y = r_x; end			// 2    swap  y, x
     				3: begin									// 3    ret
 							c_pc = r_s0;
 							c_s0 = r_s1;
