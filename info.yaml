@@ -4,7 +4,7 @@ project:
   wokwi_id:    0        # If using wokwi, set this to your project's ID
   source_files:        # If using an HDL, set wokwi_id as 0 and uncomment and list your source files here. Source files must be in ./src
     - cpu.v
-  top_module:  "moonbase_cpu_4bit"      # put the name of your top module here, make it unique by prepending your github username
+  top_module:  "moonbase_cpu_8bit"      # put the name of your top module here, make it unique by prepending your github username
 
 # As everyone will have access to all designs, try to make it easy for someone new to your design to know what
 # it does and how to operate it.
@@ -15,7 +15,7 @@ project:
 documentation: 
   author:       "Paul Campell"      # Your name
   discord:      "Taniwha"      # Your discord handle
-  title:        "4 bit CPU"      # Project title
+  title:        "8 bit CPU"      # Project title
   description:  "simple cpu"      # Short description of what your project does
   how_it_works: "
 It has a 4-bit accumulator, a 7-bit PC, 2 7-bit index registers and a carry bit.

@@ -1,12 +1,12 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg)
 
-# tiny 4-bit CPU
+# tiny 8-bit CPU
 
 From Paul Campbell - Moonbase Otago - visit [VROOM!](https://moonbaseotago.github.io/) for something slightly bigger
 
-This is a 4-bit CPU in verilog designed for tiny-tapeout.
+This is a 8-bit CPU in verilog designed for tiny-tapeout.
 
-It has a 4-bit accumulator, a 7-bit PC, 2 7-bit index registers and a carry bit.
+It has a 8-bit accumulator, a 7-bit PC, 2 8-bit index registers and a carry bit.
 
 The main limitations are the 6/8-bit bus - it's designed to run with an external SRAM and a 7-bit address latch, code is loaded externally.
 
