@@ -52,6 +52,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     reg  [7:0]r_x,  c_x;	// x index register	// by convention r_* is a flop, c_* is the combinatorial that feeds it
     reg  [7:0]r_y,  c_y;	// y index register
     reg  [7:0]r_a,  c_a;	// accumulator
+    reg  [7:0]r_b,  c_b;	// temp accumulator
     reg       r_c,  c_c;	// carry flag
     reg  [3:0]r_h,  c_h;	// operand temp (high)
     reg  [3:0]r_l,  c_l;	// operand temp (low)
@@ -75,34 +76,39 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     //		a - data store dataH (might not do this)
     //
     reg [3:0]r_phase, c_phase;	// CPU internal state machine
-	
 
     // instructions
     //
-    //  0 v:	add a, v(x/y)	- sets C
-    //  1 v: 	sub a, v(x/y)	- sets C
-    //  2 v:	or a, v(x/y)
-    //  3 v:	and a, v(x/y)
-    //  4 v:	xor a, v(x/y)
-    //  5 v:	mov a, v(x/y)
-    //  6 v:	movd a, v(x/y)
-    //  7 0:	swap x, y
-    //	  1:    add a, c
-    //	  2:    mov x.l, a
-    //	  3:    ret
-	//    4:    add y, a
-    //	  5:    add x, a
-	//    6:    add y, #1
-	//    7:    add x, #1
-    //  a v:	movd v(x/y), a
-    //  b v:	mov  v(x/y), a
-    //	f 0 H L:	mov a, #HL
-    //  f 1 H L:	add a, #HL
-    //  f 2 H L:	mov x, #hl
-    //  f 3 H L:	mov y, #hl
-    //  f 4 H L:	jne a/c, hl	if h[3] the test c otherwise test a
-    //  f 5 H L:	jeq a/c, hl	if h[3] the test c otherwise test a
-    //  f 6 H L:	jmp/call hl
+    //  0v:		add a, v(x/y)	- sets C
+    //  1v: 	sub a, v(x/y)	- sets C
+    //  2v:		or a, v(x/y)
+    //  3v:		and a, v(x/y)
+    //  4v:		xor a, v(x/y)
+    //  5v:		mov a, v(x/y)
+    //  6v:		movd a, v(x/y)
+    //  77:		swap x, y
+    //	71:		add a, c
+    //	72:		mov x.l, a
+    //	73:		ret
+	//  74:		add y, a
+    //	75:		add x, a
+	//  76:		add y, #1
+	//  77:		add x, #1
+	//	8v:		nop
+	//	9v:		nop
+    //  av:		movd v(x/y), a
+    //  bv:		mov  v(x/y), a
+	//	cv:		nop
+	//	dv:		nop
+	//	ev:		nop
+    //	f0 HL:	mov a, #HL
+    //  f1 HL:	add a, #HL
+    //  f2 HL:	mov x, #hl
+    //  f3 HL:	mov y, #hl
+    //  f4 HL:	jne a/c, hl	if h[3] the test c otherwise test a
+    //  f5 HL:	jeq a/c, hl	if h[3] the test c otherwise test a
+    //  f6 HL:	jmp/call hl
+	//	f7 HL:	nop
     //
     //  Memory access - addresses are 7 bits - v(X/y) is a 3-bit offset v[2:0]
     //  	if  v[3] it's Y+v[2:0]
@@ -137,6 +143,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		c_x    = r_x;
 		c_y    = r_y;
 		c_a    = r_a;
+		c_b    = r_b;
 		c_s0   = r_s0;
 		c_s1   = r_s1;
 		c_s2   = r_s2;
@@ -175,7 +182,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				c_v = ram_in;
 				c_pc = c_pc_inc;
 				case (r_ins) // synthesis full_case parallel_case
-				7, 8, 9, 10, 11: c_phase = 8;// some instructions don't have a 2nd fetch
+				7, 8, 9, 10, 11, 12, 13, 14: c_phase = 8;// some instructions don't have a 2nd fetch
 				default:	     c_phase = 4;
 				endcase
 			end
@@ -230,7 +237,15 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 					7: c_x = c_i_add;							// 7    add   y, #1
 					default: ;
 					endcase
-				9:  ;  // noop
+				8:  case (r_v) // synthesis full_case parallel_case
+					0:	c_a = r_y;								// 0	mov a, y
+					1:	c_a = r_x;								// 1	mov a, x
+					2:	c_b = r_a;								// 2	mov b, a
+					3:	begin c_b = r_a; c_a = r_b; end			// 3	swap b, a
+					7:	c_a = r_pc;								// 7	mov a, pc
+					default: ; // nop
+					endcase
+				9:   ;  // noop
 				10,												// movd v(x), a
 				11:	c_phase = 9;								// mov  v(x), a
 				12:  ;  // noop
@@ -238,10 +253,10 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				14:  ;  // noop
 
 				15: case (r_v) // synthesis full_case parallel_case
-					0:	c_a  = {r_h, r_l};						// mov  a, #VV
-					1:	begin c_c = c_add[8]; c_a = c_add[7:0]; end	// add  a, #v
-					2:	c_x  = {r_h, r_l};						// mov  x, #VV
-					3:	c_y  = {r_h, r_l};						// mov  x, #VV
+					0:	c_a  = {r_h, r_l};								// mov  a, #HL
+					1:	begin c_c = c_add[8]; c_a = c_add[7:0]; end		// add  a, #HL
+					2:	c_x  = {r_h, r_l};								// mov  x, #VV
+					3:	c_y  = {r_h, r_l};								// mov  x, #VV
 					4:	c_pc = (r_h[3]?!r_c : r_a != 0) ? {r_h[2:0], r_l} : r_pc; // jne	a/c, VV
 					5:	c_pc = (r_h[3]? r_c : r_a == 0) ? {r_h[2:0], r_l} : r_pc; // jeq        a/c, VV
 					6:	begin c_pc = {r_h[2:0], r_l};				// jmp  VV
@@ -277,6 +292,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 
     always @(posedge clk) begin
 		r_a     <= c_a;
+		r_b     <= c_b;
 		r_c     <= c_c;
 		r_x     <= c_x;
 		r_y     <= c_y;
