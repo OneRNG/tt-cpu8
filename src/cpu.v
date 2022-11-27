@@ -94,7 +94,14 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     //	75:		add x, a
 	//  76:		add y, #1
 	//  77:		add x, #1
-	//	8v:		nop
+	//	80:		mov a, y
+	//	81:		mov a, x
+	//	82:		mov b, a
+	//	83:		swap b, a
+	//	84:		mov a, y
+	//	85:		mov a, x
+	//	86:		nop
+	//	87:		mov pc, a
 	//	9v:		nop
     //  av:		movd v(x/y), a
     //  bv:		mov  v(x/y), a
@@ -152,6 +159,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		c_h	   = r_h;
 		c_pc   = r_pc;
 		c_c    = r_c;
+		c_v    = r_v;
 		write_data_n = 1;
 		write_ram_n = 1;
 		addr_pc = 'bx;
@@ -242,8 +250,10 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 					1:	c_a = r_x;								// 1	mov a, x
 					2:	c_b = r_a;								// 2	mov b, a
 					3:	begin c_b = r_a; c_a = r_b; end			// 3	swap b, a
-					7:	c_a = r_pc;								// 7	mov a, pc
+					4:	c_y = r_a;								// 4	mov y, a
+					5:	c_x = r_a;								// 5 	mov x, a
 					default: ; // nop
+					7:	c_a = r_pc;								// 7	mov a, pc
 					endcase
 				9:   ;  // noop
 				10,												// movd v(x), a
@@ -284,7 +294,6 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				data_pc = 0;
 				write_data_n =  r_ins[0];
 				write_ram_n  = ~r_ins[0];
-				c_nibble = 'bx;
 				c_phase = 0;
 			end
     	endcase
