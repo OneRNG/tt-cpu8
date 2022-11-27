@@ -29,7 +29,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	//		128-131 internal	(internal ram cells, for filling up the die :-)
 	//
 
-	localparam N_LOCAL_RAM = 16;
+	localparam N_LOCAL_RAM = 8;
      
     wire clk			= io_in[0];
     wire reset			= io_in[1];
@@ -46,7 +46,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	wire	  write_local_ram = is_local_ram & !write_ram_n;
 	wire [$clog2(N_LOCAL_RAM)-1:0]local_ram_addr = data_addr[$clog2(N_LOCAL_RAM)-1:0];
     wire [6:0]addr_out = addr_pc ? r_pc : data_addr;							// address out mux (PC or X/Y+off)
-    assign    io_out   = {strobe_out, strobe_out? addr_out : {data_pc, write_ram_n|is_local_ram, write_data_n, r_nibble?r_a[7:4]:r_a[3:0]}};  // mux address and data out
+    assign    io_out   = {strobe_out, strobe_out? addr_out : {data_pc, write_ram_n|is_local_ram, write_data_n, !r_nibble?r_a[7:4]:r_a[3:0]}};  // mux address and data out
 
     reg  [6:0]r_pc, c_pc;	// program counter	// actual flops in the system 
     reg  [7:0]r_x,  c_x;	// x index register	// by convention r_* is a flop, c_* is the combinatorial that feeds it
@@ -94,14 +94,15 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     //	75:		add x, a
 	//  76:		add y, #1
 	//  77:		add x, #1
-	//	80:		mov a, y
-	//	81:		mov a, x
-	//	82:		mov b, a
-	//	83:		swap b, a
-	//	84:		mov a, y
-	//	85:		mov a, x
-	//	86:		nop
-	//	87:		mov pc, a
+	//	78:		mov a, y
+	//	79:		mov a, x
+	//	7a:		mov b, a
+	//	7b:		swap b, a
+	//	7c:		mov a, y
+	//	7d:		mov a, x
+	//	7e:		clr a
+	//	7f:		mov pc, a
+	//	8v:		nop
 	//	9v:		nop
     //  av:		movd v(x/y), a
     //  bv:		mov  v(x/y), a
@@ -137,12 +138,12 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	reg	 [3:0] r_local_ram0[0:N_LOCAL_RAM-1];
 	reg	 [3:0] r_local_ram1[0:N_LOCAL_RAM-1];
 
-	wire [3:0] local_ram = r_nibble?r_local_ram1[local_ram_addr]:r_local_ram0[local_ram_addr];
-	always @(posedge clk)
-	if (write_local_ram && !r_nibble)
-		r_local_ram0[local_ram_addr] <= r_a[3:0];
+	wire [3:0] local_ram = !r_nibble?r_local_ram1[local_ram_addr]:r_local_ram0[local_ram_addr];
 	always @(posedge clk)
 	if (write_local_ram && r_nibble)
+		r_local_ram0[local_ram_addr] <= r_a[3:0];
+	always @(posedge clk)
+	if (write_local_ram && !r_nibble)
 		r_local_ram1[local_ram_addr] <= r_a[7:4];
 
     always @(*) begin
@@ -227,8 +228,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				3:	c_a = r_a&{r_h, r_l};							// sub  a, v(x)
 				4:	c_a = r_a^{r_h, r_l};							// xor  a, v(x)
 				5,													// mov  a, v(x)
-				6,													// movd a, v(x)
-				8:	c_a = {r_h, r_l};								// mov  a, #v
+				6:	c_a = {r_h, r_l};								// movd a, v(x)
 				7:	case (r_v) // synthesis full_case parallel_case
     				0: begin c_x = r_y; c_y = r_x; end			// 0    swap  y, x
 					1: c_a = r_a+{7'b000, r_c};					// 1	add   a, c
@@ -243,18 +243,17 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 					5: c_x = c_i_add;							// 5    add   x, a
 					6: c_y = c_i_add;							// 6    add   y, #1
 					7: c_x = c_i_add;							// 7    add   y, #1
+					8:	c_a = r_y;								// 8	mov a, y
+					9:	c_a = r_x;								// 9	mov a, x
+					10:	c_b = r_a;								// a	mov b, a
+					11:	begin c_b = r_a; c_a = r_b; end			// b	swap b, a
+					12:	c_y = r_a;								// c	mov y, a
+					13:	c_x = r_a;								// d 	mov x, a
+					14:	c_a = 0;								// e	clr a
+					15:	c_a = r_pc;								// f	mov a, pc
 					default: ;
 					endcase
-				8:  case (r_v) // synthesis full_case parallel_case
-					0:	c_a = r_y;								// 0	mov a, y
-					1:	c_a = r_x;								// 1	mov a, x
-					2:	c_b = r_a;								// 2	mov b, a
-					3:	begin c_b = r_a; c_a = r_b; end			// 3	swap b, a
-					4:	c_y = r_a;								// 4	mov y, a
-					5:	c_x = r_a;								// 5 	mov x, a
-					default: ; // nop
-					7:	c_a = r_pc;								// 7	mov a, pc
-					endcase
+				8:   ;  // noop
 				9:   ;  // noop
 				10,												// movd v(x), a
 				11:	c_phase = 9;								// mov  v(x), a
@@ -306,6 +305,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		r_x     <= c_x;
 		r_y     <= c_y;
 		r_ins   <= c_ins;
+		r_v		<= c_v;
 		r_l		<= c_l;
 		r_h		<= c_h;
 		r_pc    <= c_pc;

@@ -3,7 +3,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles
 
 
-outputs = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, 0xe, 0x8, 0x6, 0xa, 0xf, 0x8, 0xc, 0xd, 0xe, 0xf ]
+outputs = [ 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0x22, 0xee, 0x88, 0x66, 0xaa, 0xaf, 0xf1, 0x05, 0x6, 0x7, 0x8 ]
 
 @cocotb.test()
 async def test_cpu_4bit(dut):
@@ -16,12 +16,17 @@ async def test_cpu_4bit(dut):
     await ClockCycles(dut.clk, 10)
     dut.rst.value = 0
 
+    tmp = 1000
     dut._log.info("check all data outputs")
-    for i in range(27):
+    for i in range(26):
         dut._log.info("check output {}".format(i))
         while 1 :
             await ClockCycles(dut.clk, 1)
-            if dut.data_write.value == 0:
-                assert int(dut.data_out.value) == outputs[i]
-                break
+            if int(dut.data_write.value) == 0:
+                if int(dut.data_choose.value) == 0:
+                    tmp = int(dut.data_out.value)<<4
+                else :
+                    assert (int(dut.data_out.value)+tmp) == outputs[i]
+                    tmp = 1000
+                    break
 
