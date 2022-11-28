@@ -92,16 +92,16 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     //	73:		ret
 	//  74:		add y, a
     //	75:		add x, a
-	//  76:		add y, #1
-	//  77:		add x, #1
+	//  76:		inc y
+	//  77:		inc x
 	//	78:		mov a, y
 	//	79:		mov a, x
 	//	7a:		mov b, a
 	//	7b:		swap b, a
-	//	7c:		mov a, y
-	//	7d:		mov a, x
+	//	7c:		mov y, a
+	//	7d:		mov x, a
 	//	7e:		clr a
-	//	7f:		mov pc, a
+	//	7f:		mov a, pc
 	//	8v:		nop
 	//	9v:		nop
     //  av:		movd v(x/y), a
@@ -133,7 +133,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	wire [8:0]c_sub = {1'b0, r_a}-{1'b0, r_h, r_l};
 	wire [6:0]c_i_add = (r_v[0]?r_x:r_y)+(r_v[1]?8'b1:r_a);
 	wire [6:0]c_pc_inc = r_pc+1;
-
+	wire [7:0]c_a_inc = r_a + {7'b0, r_c|r_v[0]};
 	
 	reg	 [3:0] r_local_ram0[0:N_LOCAL_RAM-1];
 	reg	 [3:0] r_local_ram1[0:N_LOCAL_RAM-1];
@@ -167,7 +167,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		data_pc = 'bx;
 		c_nibble = 'bx;
     	if (reset) begin	// reset clears the state machine and sets PC to 0
-			c_y = 0x80;	// point at internal sram
+			c_y = 8'h80;	// point at internal sram
 			c_pc = 0;
 			c_phase = 0;
 			strobe_out = 1;
@@ -231,8 +231,8 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				5,												// mov  a, v(x)
 				6:	c_a = {r_h, r_l};							// movd a, v(x)
 				7:	case (r_v) // synthesis full_case parallel_case
-					0: c_a = r_a+{7'b000, r_c};					// 0	add   a, c
-    				1: c_a = r_a + 1;							// 1    inc   a
+					0: c_a = c_a_inc;							// 0	add   a, c
+    				1: c_a = c_a_inc;							// 1    inc   a
     				2: begin c_x = r_y; c_y = r_x; end			// 2    swap  y, x
     				3: begin									// 3    ret
 							c_pc = r_s0;

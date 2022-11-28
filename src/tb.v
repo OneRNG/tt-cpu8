@@ -75,7 +75,7 @@ module tb (
 	sram[8'h2c] = 'hb0;
 	sram[8'h2d] = 'ha7;	// movd	7(x), a    f->f7
 
-	sram[8'h2e] = 'hf5;	// jmp NN
+	sram[8'h2e] = 'hf6;	// jmp NN
 	sram[8'h2f] = 'h3c;
 	
 	sram[8'h30] = 'hf1;	//XX: add	a, #1
@@ -94,7 +94,7 @@ module tb (
 
 				//NN:
 	
-	sram[8'h3c] = 'hf5;	// jmp 0x41
+	sram[8'h3c] = 'hf6;	// jmp 0x41
 	sram[8'h3d] = 'h3c;
 
 `ifdef LOCAL_TEST

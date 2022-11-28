@@ -35,10 +35,10 @@ There are 33 instructions. each 1 or 2 bytes:
     79:		mov a, x
     7a:		mov b, a
     7b:		swap b, a
-    7c:		mov a, y
-    7d:		mov a, x
+    7c:		mov y, a
+    7d:		mov x, a
     7e:		clr a
-    7f:		mov pc, a
+    7f:		mov a, pc
     8v:		nop
     9v:		nop
     av:		movd v(x/y), a
