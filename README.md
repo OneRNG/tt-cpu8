@@ -59,6 +59,7 @@ Memory is 128/256 (128 unified or 128xcode+128xdata) 4-bit nibbles, references a
 
 There is a 4-deep hardware call stack.
 
+An assembler for this CPU [is here](https://github.com/MoonbaseOtago/tt-asm)
 
 # What is Tiny Tapeout?
 
