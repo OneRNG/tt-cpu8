@@ -29,7 +29,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	//		128-131 internal	(internal ram cells, for filling up the die :-)
 	//
 
-	localparam N_LOCAL_RAM = 4;
+	localparam N_LOCAL_RAM = 2;
      
     wire clk			= io_in[0];
     wire reset			= io_in[1];
@@ -62,7 +62,6 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     reg  [3:0]r_v,  c_v;	// operand temp (low)
 	reg  [11:0]r_s0, c_s0;	// call stack
 	reg  [11:0]r_s1, c_s1;
-	reg  [11:0]r_s2, c_s2;
 
     //
     //	phase:
@@ -151,7 +150,6 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		c_b    = r_b;
 		c_s0   = r_s0;
 		c_s1   = r_s1;
-		c_s2   = r_s2;
 		c_l    = r_l;
 		c_h	   = r_h;
 		c_ee   = r_ee;
@@ -273,7 +271,6 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     				3: begin									// 3    ret
 							c_pc = r_s0;
 							c_s0 = r_s1;
-							c_s1 = r_s2;
 					   end
 					4: c_y = c_i_add;							// 4    add   y, a
 					5: c_x = c_i_add;							// 5    add   x, a
@@ -308,7 +305,6 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 							if (r_ee[4]) begin	// call
 								c_s0 = r_pc;
 								c_s1 = r_s0;
-								c_s2 = r_s1;
 							end
 						 end
 					default: ;
@@ -353,7 +349,6 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		r_phase <= c_phase;
 		r_s0    <= c_s0;
 		r_s1    <= c_s1;
-		r_s2    <= c_s2;
     end
 
 endmodule
