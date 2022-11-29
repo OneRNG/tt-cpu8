@@ -6,15 +6,16 @@ From Paul Campbell - Moonbase Otago - visit [VROOM!](https://moonbaseotago.githu
 
 This is a 8-bit CPU in verilog designed for tiny-tapeout.
 
-It has a 8-bit accumulator, a 7-bit PC, 2 8-bit index registers and a carry bit.
+It has a 8-bit accumulator, a 12-bit PC, 2 13-bit index registers and a carry bit.
 
-The main limitations are the 6/8-bit bus - it's designed to run with an external SRAM and a 7-bit address latch, code is loaded externally. Accesses are 3 beats:
+The main limitations are the 6/8-bit bus - it's designed to run with an external SRAM and a 12-bit address latch, code is loaded externally. Accesses are 4 beats:
 
-- strobe loads the address latch
+- strobe loads the address latch low nibble
+- strobe loads the address latch high nibble
 - next clock loads/stores the high nibble
 - next clock loads/stores the low nibble
 
-There are 33 instructions. each 1 or 2 bytes:
+There are 33 instructions. each 1, 2 or 3 bytes:
 
     0v:		add a, v(x/y)	- sets C
     1v: 	sub a, v(x/y)	- sets C
@@ -48,16 +49,16 @@ There are 33 instructions. each 1 or 2 bytes:
     ev:		nop
     f0 HL:	mov a, #HL
     f1 HL:	add a, #HL
-    f2 HL:	mov y, #HL
-    f3 HL:	mov x, #HL
-    f4 HL:	jne a/c, HL	if h[3] the test c otherwise test a
-    f5 HL:	jeq a/c, HL	if h[3] the test c otherwise test a
-    f6 HL:	jmp/call HL
+    f2 HL:	mov y, #EEHL
+    f3 HL:	mov x, #EEHL
+    f4 HL:	jne a/c, EEHL	if ee[4] the test c otherwise test a
+    f5 HL:	jeq a/c, EEHL	if ee[4] the test c otherwise test a
+    f6 HL:	jmp/call EEHL
     f7 HL:	nop
     
-Memory is 128/256 (128 unified or 128xcode+128xdata) 4-bit nibbles, references are a 3 bit (8 byte) offset from the X or Y index registers - the general idea is that the Y register points to an 8 register scratch pad block (a bit like an 8051) but can also be repurposed for copies when required. There is an on-chip SRAM block for data access only (addressed with the MSB of the data address) - mostly just to soak up any additional gates.
+Memory is 4096 bytes, references are a 3 bit (8 byte) offset from the X or Y index registers - the general idea is that the Y register points to a scratch pad block (a bit like an 8051) but can also be repurposed for copies when required. There is an on-chip SRAM block for data access only (addressed with the MSB of the data address) - mostly just to soak up any additional gates.
 
-There is a 4-deep hardware call stack.
+There is a 3-deep hardware call stack.
 
 An assembler for this CPU [is here](https://github.com/MoonbaseOtago/tt-asm)
 

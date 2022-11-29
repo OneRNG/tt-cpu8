@@ -9,27 +9,29 @@
 module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output [7:0] io_out);
    
 	//
-	//	External interfacex
+	//	External interface
 	//
 	//	external address latch
-	//		the external 7 bit address latch is loaded from io_out[6:0] when io_out[7] is 1	
-	//	external SRAM (eg MWS5101AEL3):
-	//		the external RAM always produces what is at the latch's addresses on io_in[5:2]
+	//		the external 12 bit address latch is loaded [5:0] from io_out[5:0] when io_out[7:6] is 10
+	//		the external 12 bit address latch is loaded [11:6] from io_out[5:0] when io_out[7:6] is 11
+	//	external SRAM (eg MWS5101AEL3) when io_out[7] is 0
+	//	    which nibble is from io_out[6]
+	//		the external RAM always produces what is at the latch's addresses on io_in[5:2] when 
 	//		the external SRAM is written when io_out[7] is 0 and io_out[5] is 0
 	//		io_out[6] can be used as an extra address bit to split the address space between
 	//			code (1) and data (0) to use a 256-nibble sram (woot!)
-	//  external devices:
+	//  external devices when io_out[7] is 0:
+	//	    which nibble is from io_out[6]
 	//		external devices can be read from io_in[7:6] (at address pointed to by the address latch)
 	//		external devices can be written from io_out[3:0] (at address pointed to by the address latch)
-	//			when io_out[7] is 0 and io_out[4] is 0
-	//
+	//			when io_out[4] is 0
 	//
 	//	SRAM address space (data accesses):
-	//		0-127	external
-	//		128-131 internal	(internal ram cells, for filling up the die :-)
+	//		0-0xfff	   external
+	//		0x1000-131 internal	(internal ram cells, for filling up the die :-)
 	//
 
-	localparam N_LOCAL_RAM = 2;
+	localparam N_LOCAL_RAM = 4;
      
     wire clk			= io_in[0];
     wire reset			= io_in[1];
@@ -78,10 +80,12 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     reg [3:0]r_phase, c_phase;	// CPU internal state machine
 
     // instructions
+	//
+	//	Registers:  a,b 8 bit, x,y 13 bits, pc 12 bits
     //
     //  0v:		add a, v(x/y)	- sets C
     //  1v: 	sub a, v(x/y)	- sets C
-    //  2v:		or a, v(x/y)
+    //  2v:		or  a, v(x/y)
     //  3v:		and a, v(x/y)
     //  4v:		xor a, v(x/y)
     //  5v:		mov a, v(x/y)
