@@ -37,31 +37,33 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     wire [1:0]data_in	= io_in[7:6];
     
     reg       strobe_out;	// address strobe		- designed to be wired to a 7 bit latch and a MWS5101AEL3
+	reg		  nibble;	    // address/data nibble
     reg       write_data_n;	// write enable for data
     reg       write_ram_n;	// write enable for ram
     reg	      addr_pc;
-    reg	      data_pc;
-	wire [6:0]data_addr = ((r_v[3]?r_y[6:0]:r_x[6:0])+{4'b000, r_v[2:0]});
-	wire	  is_local_ram = (r_v[3]?r_y[7]:r_x[7]);
+	wire [11:0]data_addr = ((r_v[3]?r_y[11:0]:r_x[11:0])+{8'b000, r_v[2:0]});
+	wire	  is_local_ram = (r_v[3]?r_y[12]:r_x[12]);
 	wire	  write_local_ram = is_local_ram & !write_ram_n;
+	wire	  write_ext_ram_n = is_local_ram | write_ram_n;
 	wire [$clog2(N_LOCAL_RAM)-1:0]local_ram_addr = data_addr[$clog2(N_LOCAL_RAM)-1:0];
-    wire [6:0]addr_out = addr_pc ? r_pc : data_addr;							// address out mux (PC or X/Y+off)
-    assign    io_out   = {strobe_out, strobe_out? addr_out : {data_pc, write_ram_n|is_local_ram, write_data_n, !r_nibble?r_a[7:4]:r_a[3:0]}};  // mux address and data out
+    wire [11:0]addr_out = addr_pc ? r_pc : data_addr;							// address out mux (PC or X/Y+off)
+    wire [5:0]addr_out_mux = (nibble?addr_out[11:6]:addr_out[5:0]);			// mux-d by portion
+    assign    io_out   = {strobe_out, nibble, strobe_out? addr_out_mux : {write_ext_ram_n, write_data_n, !nibble?r_a[7:4]:r_a[3:0]}};  // mux address and data out
 
-    reg  [6:0]r_pc, c_pc;	// program counter	// actual flops in the system 
-    reg  [7:0]r_x,  c_x;	// x index register	// by convention r_* is a flop, c_* is the combinatorial that feeds it
-    reg  [7:0]r_y,  c_y;	// y index register
+    reg  [11:0]r_pc, c_pc;	// program counter	// actual flops in the system 
+    reg  [12:0]r_x,  c_x;	// x index register	// by convention r_* is a flop, c_* is the combinatorial that feeds it
+    reg  [12:0]r_y,  c_y;	// y index register
     reg  [7:0]r_a,  c_a;	// accumulator
     reg  [7:0]r_b,  c_b;	// temp accumulator
     reg       r_c,  c_c;	// carry flag
     reg  [3:0]r_h,  c_h;	// operand temp (high)
     reg  [3:0]r_l,  c_l;	// operand temp (low)
+	reg  [4:0]r_ee, c_ee;	// extended const (bits 12:4)
     reg  [3:0]r_v,  c_v;	// operand temp (low)
-	reg  [6:0]r_s0, c_s0;	// call stack
-	reg  [6:0]r_s1, c_s1;
-	reg  [6:0]r_s2, c_s2;
-	reg  [6:0]r_s3, c_s3;
-	reg		  r_nibble, c_nibble;
+	reg  [11:0]r_s0, c_s0;	// call stack
+	reg  [11:0]r_s1, c_s1;
+	reg  [11:0]r_s2, c_s2;
+	reg  [11:0]r_s3, c_s3;
 
     //
     //	phase:
@@ -111,11 +113,11 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 	//	ev:		nop
     //	f0 HL:	mov a, #HL
     //  f1 HL:	add a, #HL
-    //  f2 HL:	mov y, #HL
-    //  f3 HL:	mov x, #HL
-    //  f4 HL:	jne a/c, HL	if H[3] the test c otherwise test a
-    //  f5 HL:	jeq a/c, HL	if H[3] the test c otherwise test a
-    //  f6 HL:	jmp/call HL
+    //  f2 HL:	mov y, #EELL
+    //  f3 HL:	mov x, #EEHL
+    //  f4 HL:	jne a/c, EEHL	if EE[4] then test c otherwise test a
+    //  f5 HL:	jeq a/c, EEHL	if EE[4] then test c otherwise test a
+    //  f6 HL:	jmp/call EEHL   if EE[4] call else jmp
 	//	f7 HL:	nop
     //
     //  Memory access - addresses are 7 bits - v(X/y) is a 3-bit offset v[2:0]
@@ -131,20 +133,16 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 
 	wire [8:0]c_add = {1'b0, r_a}+{1'b0, r_h, r_l};	// ALUs
 	wire [8:0]c_sub = {1'b0, r_a}-{1'b0, r_h, r_l};
-	wire [6:0]c_i_add = (r_v[0]?r_x:r_y)+(r_v[1]?8'b1:r_a);
-	wire [6:0]c_pc_inc = r_pc+1;
+	wire [12:0]c_i_add = {r_v[0]?r_x[12]:r_y[12], (r_v[0]?r_x[11:0]:r_y[11:0])+(r_v[1]?12'b1:{4'b0,r_a})};
+	wire [11:0]c_pc_inc = r_pc+1;
 	wire [7:0]c_a_inc = r_a + {7'b0, r_c|r_v[0]};
 	
-	reg	 [3:0] r_local_ram0[0:N_LOCAL_RAM-1];
-	reg	 [3:0] r_local_ram1[0:N_LOCAL_RAM-1];
+	reg	 [7:0]r_local_ram[0:N_LOCAL_RAM-1];
 
-	wire [3:0] local_ram = !r_nibble?r_local_ram1[local_ram_addr]:r_local_ram0[local_ram_addr];
+	wire [7:0]local_ram = r_local_ram[local_ram_addr];
 	always @(posedge clk)
-	if (write_local_ram && r_nibble)
-		r_local_ram0[local_ram_addr] <= r_a[3:0];
-	always @(posedge clk)
-	if (write_local_ram && !r_nibble)
-		r_local_ram1[local_ram_addr] <= r_a[7:4];
+	if (write_local_ram)
+		r_local_ram[local_ram_addr] <= r_a;
 
     always @(*) begin
 		c_ins  = r_ins;	
@@ -158,16 +156,16 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		c_s3   = r_s3;
 		c_l    = r_l;
 		c_h	   = r_h;
+		c_ee   = r_ee;
 		c_pc   = r_pc;
 		c_c    = r_c;
 		c_v    = r_v;
 		write_data_n = 1;
 		write_ram_n = 1;
 		addr_pc = 'bx;
-		data_pc = 'bx;
-		c_nibble = 'bx;
+		nibble = 'bx;
     	if (reset) begin	// reset clears the state machine and sets PC to 0
-			c_y = 8'h80;	// point at internal sram
+			c_y = 13'h1000;	// point at internal sram
 			c_pc = 0;
 			c_phase = 0;
 			strobe_out = 1;
@@ -176,52 +174,92 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
     	0:	begin					// 0: address latch instruction PC
 				strobe_out = 1;
 				addr_pc = 1;
-				c_nibble = 0;
+				nibble = 0;
 				c_phase = 1;
 			end
-    	1:	begin					// 1: read data in r_ins
-				strobe_out = 0;
-				data_pc = 1;
-				c_ins = ram_in;
-				c_nibble = 1;
+    	1:	begin					// 0: address latch instruction PC
+				strobe_out = 1;
+				addr_pc = 1;
+				nibble = 1;
 				c_phase = 2;
 			end
-    	2:	begin					// 3: read data in r_v
+    	2:	begin					// 1: read data in r_ins
 				strobe_out = 0;
-				data_pc = 1;
+				c_ins = ram_in;
+				nibble = 0;
+				c_phase = 3;
+			end
+    	3:	begin					// 3: read data in r_v
+				strobe_out = 0;
 				c_v = ram_in;
+				nibble = 1;
 				c_pc = c_pc_inc;
 				case (r_ins) // synthesis full_case parallel_case
-				7, 8, 9, 10, 11, 12, 13, 14: c_phase = 8;// some instructions don't have a 2nd fetch
+				7, 8, 9, 10, 11, 12, 13, 14: c_phase = 12;// some instructions don't have a 2nd fetch
 				default:	     c_phase = 4;
 				endcase
 			end
 		4:	begin						// 4 address latch for next operand  
 				strobe_out = 1;
 				addr_pc = r_ins[3:2] == 3;	// some instructions read a 2nd operand, the rest the come here read a memory location
-				c_nibble = 0;
-				c_phase = 5;
+				nibble = 0;
+				c_phase = r_ins[3:2] != 3 && is_local_ram ? 7 : 5;
 			end
-		5:	begin						// 5 read next operand	r_hi
-				strobe_out = 0;
-				c_nibble = 1;
-				data_pc = r_ins == 4'hf;
-				c_h = ((r_ins[3:1] == 3)? 4'b0 : (is_local_ram&&r_ins != 4'hf)?local_ram:ram_in);
+		5:	begin						// 4 address latch for next operand  
+				strobe_out = 1;
+				addr_pc = r_ins[3:2] == 3;	// some instructions read a 2nd operand, the rest the come here read a memory location
+				nibble = 1;
 				c_phase = 6;
 			end
-		6:	begin						// 5 read next operand	r_lo
+		6:	begin						// 5 read next operand	r_hi
 				strobe_out = 0;
-				data_pc = r_ins == 4'hf;
-				c_l = ((r_ins[3:1] == 3)?{2'b0,data_in}:(is_local_ram&&r_ins != 4'hf)?local_ram:ram_in);	// read the actial data, movd comes from upper bits
+				nibble = 0;
+				c_h = ((r_ins[3:1] == 3)? 4'b0 : ram_in);
+				c_phase = 7;
+			end
+		7:	begin						// 5 read next operand	r_lo
+				strobe_out = 0;
+				nibble = 1;
+				if (is_local_ram&&r_ins != 4'hf) begin
+					c_h = local_ram[7:4];
+					c_l = local_ram[3:0];
+				end else begin
+					c_l = ((r_ins[3:1] == 3)?{2'b0,data_in}:ram_in);	// read the actial data, movd comes from upper bits
+				end
 				if (r_ins == 4'hf)		// if we fetched from PC increment it
 					c_pc = c_pc_inc;
-				c_phase = 8;
+				c_phase = (r_ins == 4'hf && r_v[3:1] != 0) ? 8: 12;
 			end
-		8:	begin						// 6 execute stage 
+		8:	begin						// 4 address latch for next operand  
+				strobe_out = 1;
+				addr_pc = 1;
+				nibble = 0;
+				c_phase = 9;
+			end
+		9:	begin						// 4 address latch for next operand  
+				strobe_out = 1;
+				addr_pc = 1;
+				nibble = 1;
+				c_phase = 10;
+			end
+		10:	begin						// 5 read next operand	r_hi
+				strobe_out = 0;
+				nibble = 0;
+				c_ee[4] = ram_in[0];
+				c_phase = 11;
+			end
+		11:	begin						// 5 read next operand	r_lo
+				strobe_out = 0;
+				nibble = 1;
+				c_ee[3:0] = ram_in;
+				c_pc = c_pc_inc;
+				c_phase = 12;
+			end
+		12:	begin						// 6 execute stage 
 				strobe_out = r_ins[3:1] == 5;	// if writing to anything latch address
 				addr_pc = 0;
 				c_phase = 0;					// if not writing go back
-				c_nibble = 0;
+				nibble = 0;
 				case (r_ins)// synthesis full_case parallel_case
 				0:	begin c_c = c_add[8]; c_a = c_add[7:0]; end	// add  a, v(x)
 				1:	begin c_c = c_sub[8]; c_a = c_sub[7:0]; end	// sub  a, v(x)
@@ -244,12 +282,12 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 					5: c_x = c_i_add;							// 5    add   x, a
 					6: c_y = c_i_add;							// 6    add   y, #1
 					7: c_x = c_i_add;							// 7    add   y, #1
-					8:	c_a = r_y;								// 8	mov a, y
-					9:	c_a = r_x;								// 9	mov a, x
+					8:	c_a = r_y[7:0];							// 8	mov a, y
+					9:	c_a = r_x[7:0];							// 9	mov a, x
 					10:	c_b = r_a;								// a	mov b, a
 					11:	begin c_b = r_a; c_a = r_b; end			// b	swap b, a
-					12:	c_y = r_a;								// c	mov y, a
-					13:	c_x = r_a;								// d 	mov x, a
+					12:	c_y[7:0] = r_a;							// c	mov y, a
+					13:	c_x[7:0] = r_a;							// d 	mov x, a
 					14:	c_a = 0;								// e	clr a
 					15:	c_a = r_pc;								// f	mov a, pc
 					default: ;
@@ -257,7 +295,7 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				8:   ;  // noop
 				9:   ;  // noop
 				10,												// movd v(x), a
-				11:	c_phase = 9;								// mov  v(x), a
+				11:	c_phase = is_local_ram ? 15:13;				// mov  v(x), a
 				12:  ;  // noop
 				13:  ;  // noop
 				14:  ;  // noop
@@ -265,12 +303,12 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 				15: case (r_v) // synthesis full_case parallel_case
 					0:	c_a  = {r_h, r_l};								// mov  a, #HL
 					1:	begin c_c = c_add[8]; c_a = c_add[7:0]; end		// add  a, #HL
-					2:	c_y  = {r_h, r_l};								// mov  y, #VV
-					3:	c_x  = {r_h, r_l};								// mov  x, #VV
-					4:	c_pc = (r_h[3]?!r_c : r_a != 0) ? {r_h[2:0], r_l} : r_pc; // jne	a/c, VV
-					5:	c_pc = (r_h[3]? r_c : r_a == 0) ? {r_h[2:0], r_l} : r_pc; // jeq        a/c, VV
-					6:	begin c_pc = {r_h[2:0], r_l};				// jmp  VV
-							if (r_h[3]) begin	// call
+					2:	c_y  = {r_ee, r_h, r_l};						// mov  y, #VV
+					3:	c_x  = {r_ee, r_h, r_l};						// mov  x, #VV
+					4:	c_pc = (r_ee[4]?!r_c : r_a != 0) ? {r_ee[3:0], r_h, r_l} : r_pc; // jne	a/c, VV
+					5:	c_pc = (r_ee[4]? r_c : r_a == 0) ? {r_ee[3:0], r_h, r_l} : r_pc; // jeq        a/c, VV
+					6:	begin c_pc = {r_ee[3:0], r_h, r_l};				// jmp  VV
+							if (r_ee[4]) begin	// call
 								c_s0 = r_pc;
 								c_s1 = r_s0;
 								c_s2 = r_s1;
@@ -281,17 +319,22 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 					endcase
 				endcase
 			end
-		9:	begin						// 7 write data stage - assert appropriate write strobe
+		13:	begin
+				strobe_out = 1;
+				addr_pc = 0;
+				nibble = 1;
+				c_phase = 14;
+			end
+		14:	begin						// 7 write data stage - assert appropriate write strobe
 				strobe_out = 0;
-				data_pc = 0;
 				write_data_n =  r_ins[0];
 				write_ram_n  = ~r_ins[0];
-				c_nibble = 1;
-				c_phase = 10;
+				nibble = 0;
+				c_phase = 15;
 			end
-		10:	begin						// 7 write data stage - assert appropriate write strobe
+		15:	begin						// 7 write data stage - assert appropriate write strobe
 				strobe_out = 0;
-				data_pc = 0;
+				nibble = 1;
 				write_data_n =  r_ins[0];
 				write_ram_n  = ~r_ins[0];
 				c_phase = 0;
@@ -309,13 +352,13 @@ module moonbase_cpu_8bit #(parameter MAX_COUNT=1000) (input [7:0] io_in, output 
 		r_v		<= c_v;
 		r_l		<= c_l;
 		r_h		<= c_h;
+		r_ee	<= c_ee;
 		r_pc    <= c_pc;
 		r_phase <= c_phase;
 		r_s0    <= c_s0;
 		r_s1    <= c_s1;
 		r_s2    <= c_s2;
 		r_s3    <= c_s3;	
-		r_nibble <= c_nibble;
     end
 
 endmodule
